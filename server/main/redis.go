@@ -14,8 +14,8 @@ import (
 
 var pool *redis.Pool
 
-//InitRedis is to inital the Redis connection pool.
-func InitRedis(addr string, idleConnNum, maxConnNum int, idleTimeout time.Duration) {
+//initRedis is to inital the Redis connection pool.
+func initRedis(addr string, idleConnNum, maxConnNum int, idleTimeout time.Duration) {
 	pool = &redis.Pool{
 		Dial: func() (conn redis.Conn, err error) {
 			return redis.Dial("tcp", addr)

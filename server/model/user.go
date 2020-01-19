@@ -6,6 +6,11 @@
  *******************************************************/
 package model
 
+const (
+	UserStatusOnline  = 1
+	UserStatusOffline = iota
+)
+
 type User struct {
 	UserId    int    `json:"user_id"`
 	Passwd    string `json:"passwd"`
