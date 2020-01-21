@@ -7,13 +7,13 @@
 package main
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"golang-tcp-chat-demo/proto"
 	"net"
-	"strconv"
 )
 
 type Client struct {
@@ -29,36 +29,43 @@ func (p *Client) readPackage() (msg proto.Message, err error) {
 		err = errors.New("read header failed.")
 		return
 	}
+	//lenth, err = strconv.Atoi(string(p.buf[0:4]))
 
-	lenth, err = strconv.Atoi(string(p.buf[0:4]))
+	buffer := bytes.NewBuffer(p.buf[0:4])
+	packageLen := uint32(lenth)
+	err = binary.Read(buffer, binary.BigEndian, &packageLen)
 	if err != nil {
-		err = errors.New("read package lenth failed.")
+		fmt.Println("read package len failed.")
 		return
 	}
+	fmt.Println("packageLen:", packageLen)
+
 	// Read entire data according to the lenth.
-	lenth1, err := p.conn.Read(p.buf[0:lenth])
-	if lenth1 != lenth || err != nil {
+	lenth1, err := p.conn.Read(p.buf[0:packageLen])
+	if lenth1 != int(packageLen) || err != nil {
 		err = errors.New("read body failed")
+		fmt.Println("read body failed.")
 		return
 	}
 
-	err = json.Unmarshal(p.buf[0:lenth], &msg)
+	err = json.Unmarshal(p.buf[0:packageLen], &msg)
 	if err != nil {
 		fmt.Println("data unmarshal failed.")
 	}
-
+	fmt.Println("rec data :", msg)
 	return
 }
 
 func (p *Client) writePackage(data []byte) (err error) {
-	lenth := uint32(len(data))                    //Get data lenth.
-	binary.BigEndian.PutUint32(p.buf[0:4], lenth) // convert 'lenth' to bigendian.
-	lenthW, err := p.conn.Write(p.buf[0:4])
+	lenth := uint32(len(data)) //Get data lenth.
+	// Convert from 'lenth' to bigendian and writes the lenth to client cache.
+	binary.BigEndian.PutUint32(p.buf[0:4], lenth)
+	lenthW, err := p.conn.Write(p.buf[0:4]) // Send header(lenth).
 	if err != nil {
 		fmt.Println("write header failed.")
 		return
 	}
-	lenthW, err = p.conn.Write(data)
+	lenthW, err = p.conn.Write(data) //Send data.
 	if err != nil {
 		fmt.Println("write data failed.")
 		return
@@ -85,6 +92,7 @@ func (p *Client) Process() (err error) {
 	}
 }
 
+// Process the message.
 func (p *Client) processMsg(msg proto.Message) (err error) {
 	switch msg.Cmd {
 	case proto.UserLogin:
@@ -137,7 +145,7 @@ func (p *Client) login(msg proto.Message) (err error) {
 		p.loginResp(err)
 	}()
 
-	fmt.Printf("recv user login request, data:%v", msg)
+	fmt.Println("recv user login request, data:", msg)
 	var cmd proto.LoginCmd
 	err = json.Unmarshal([]byte(msg.Data), &cmd)
 	if err != nil {
@@ -156,6 +164,7 @@ func (p *Client) register(msg proto.Message) (err error) {
 	if err != nil {
 		return
 	}
+	fmt.Println("recv user register request, data:", msg)
 
 	err = mgr.Register(&cmd.User)
 	if err != nil {

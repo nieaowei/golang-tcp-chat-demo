@@ -86,6 +86,8 @@ func (p *UserMgr) Register(user *User) (err error) {
 	if err != nil {
 		return
 	}
+	fmt.Println(UserTable, fmt.Sprintf("%d", user.UserId), string(data))
+
 	_, err = conn.Do("Hset", UserTable, fmt.Sprintf("%d", user.UserId), string(data))
 	if err != nil {
 		return
